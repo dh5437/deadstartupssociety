@@ -12,10 +12,10 @@ const __dirname = path.dirname(__filename)
 const REPO = path.resolve(__dirname)
 // Output roots
 const PUBLIC_GENERATED = path.join(REPO, 'public', 'generated')
-const RESEARCH_SRC = path.join(REPO, 'Research')
-const RESEARCH_PAGES = path.join(RESEARCH_SRC, 'pages')
-const RESEARCH_JOURNALS = path.join(RESEARCH_SRC, 'journals')
-const CONTENT_RESEARCH = path.join(REPO, 'content', 'research')
+const ITERATION_SRC = path.join(REPO, 'Iteration')
+const ITERATION_PAGES = path.join(ITERATION_SRC, 'pages')
+const ITERATION_JOURNALS = path.join(ITERATION_SRC, 'journals')
+const CONTENT_ITERATION = path.join(REPO, 'content', 'iteration')
 
 // ── helpers ──────────────────────────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ async function rmrf(dir: string): Promise<void> {
   }
 }
 
-// ── Research → Fumadocs pipeline ────────────────────────────────────────────────
+// ── iteration → Fumadocs pipeline ────────────────────────────────────────────────
 
 type DocMeta = {
   srcPath: string
@@ -174,16 +174,16 @@ async function readFrontmatter(filePath: string): Promise<{ slug?: string; title
 
 async function collectDocs(): Promise<DocMeta[]> {
   const files = [
-    ...(existsSync(RESEARCH_PAGES) ? await findFiles(RESEARCH_PAGES, ['.md', '.mdx']) : []),
-    ...(existsSync(RESEARCH_JOURNALS) ? await findFiles(RESEARCH_JOURNALS, ['.md', '.mdx']) : []),
+    ...(existsSync(ITERATION_PAGES) ? await findFiles(ITERATION_PAGES, ['.md', '.mdx']) : []),
+    ...(existsSync(ITERATION_JOURNALS) ? await findFiles(ITERATION_JOURNALS, ['.md', '.mdx']) : []),
   ]
   // Include root-level markdown files (e.g., Welcome.md, Welcome.ko.md, 환영합니다.md)
   try {
-    const roots = await fs.readdir(RESEARCH_SRC, { withFileTypes: true })
+    const roots = await fs.readdir(ITERATION_SRC, { withFileTypes: true })
     for (const entry of roots) {
       if (!entry.isFile()) continue
       if (entry.name.endsWith('.md') || entry.name.endsWith('.mdx')) {
-        files.push(path.join(RESEARCH_SRC, entry.name))
+        files.push(path.join(ITERATION_SRC, entry.name))
       }
     }
   } catch {}
@@ -198,7 +198,7 @@ async function collectDocs(): Promise<DocMeta[]> {
 }
 
 async function ensureDirs(): Promise<void> {
-  await fs.mkdir(CONTENT_RESEARCH, { recursive: true })
+  await fs.mkdir(CONTENT_ITERATION, { recursive: true })
   await fs.mkdir(PUBLIC_GENERATED, { recursive: true })
 }
 
@@ -236,13 +236,13 @@ async function resolveImageCandidate(candidate: string, mdFile: string): Promise
   const local = path.resolve(path.dirname(mdFile), cleanPath)
   if (existsSync(local)) return local
 
-  // Try relative to Research root
-  const researchLocal = path.resolve(RESEARCH_SRC, cleanPath)
-  if (existsSync(researchLocal)) return researchLocal
+  // Try relative to iteration root
+  const ITERATION_LOCAL = path.resolve(ITERATION_SRC, cleanPath)
+  if (existsSync(ITERATION_LOCAL)) return ITERATION_LOCAL
 
-  // Try Research/assets/<basename>
+  // Try iteration/assets/<basename>
   const base = path.basename(cleanPath)
-  const assetsCandidate = path.join(RESEARCH_SRC, 'assets', base)
+  const assetsCandidate = path.join(ITERATION_SRC, 'assets', base)
   if (existsSync(assetsCandidate)) return assetsCandidate
 
   return undefined
@@ -404,20 +404,20 @@ function replaceDocWikilinks(txt: string, linkMap: CaseInsensitiveMap<string>): 
   return parts.join('')
 }
 
-async function processResearchToFumadocs(): Promise<void> {
-  console.log('📚 Processing Research → Fumadocs content/research ...')
+async function processiterationToFumadocs(): Promise<void> {
+  console.log('📚 Processing iteration → Fumadocs content/iteration ...')
   await ensureDirs()
 
   const metas = await collectDocs()
   const linkMap = buildNameToSlugMap(metas)
 
   // Clean output dir before writing
-  await rmrf(CONTENT_RESEARCH)
-  await fs.mkdir(CONTENT_RESEARCH, { recursive: true })
+  await rmrf(CONTENT_ITERATION)
+  await fs.mkdir(CONTENT_ITERATION, { recursive: true })
 
   // Create subdirectories for journal and memex
-  const journalDir = path.join(CONTENT_RESEARCH, '(sprint)')
-  const memexDir = path.join(CONTENT_RESEARCH, '(retrospect)')
+  const journalDir = path.join(CONTENT_ITERATION, '(sprint)')
+  const memexDir = path.join(CONTENT_ITERATION, '(retrospect)')
   await fs.mkdir(journalDir, { recursive: true })
   await fs.mkdir(memexDir, { recursive: true })
 
@@ -426,10 +426,10 @@ async function processResearchToFumadocs(): Promise<void> {
     const lang = (meta.lang || 'en').toLowerCase()
 
     // Determine output directory based on pattern
-    let outputDir = CONTENT_RESEARCH
+    let outputDir = CONTENT_ITERATION
     // Special case: 000000 stays at root level
     if (preferredSlug === '000000' || meta.fileBase === '000000') {
-      outputDir = CONTENT_RESEARCH
+      outputDir = CONTENT_ITERATION
     } else if (/^\d{4}-\d{2}-\d{2}$/.test(meta.fileBase) || /^\d{4}-\d{2}-\d{2}$/.test(preferredSlug)) {
       outputDir = journalDir
     } else if (/^[A-F0-9]{6}$/i.test(meta.fileBase) || /^[A-F0-9]{6}$/i.test(preferredSlug)) {
@@ -437,7 +437,7 @@ async function processResearchToFumadocs(): Promise<void> {
     }
 
     // Do not add language to filename; keep a single canonical filename
-    const outFile = path.join(outputDir, `${preferredSlug}.mdx`)
+    const outFile = path.join(outputDir, `${preferredSlug}.${lang}.mdx`)
     const raw = await fs.readFile(meta.srcPath, 'utf-8')
     // rewrite images first
     let body = await rewriteImages(raw, meta.srcPath)
@@ -454,7 +454,7 @@ async function processResearchToFumadocs(): Promise<void> {
   await writeJournalMeta(journalDir)
   await writeMemexMeta(memexDir)
 
-  console.log('✅ Wrote docs into content/research')
+  console.log('✅ Wrote docs into content/iteration')
 }
 
 // Inject or update frontmatter title with source filename and keep slug/lang
@@ -523,11 +523,11 @@ async function main(): Promise<void> {
     },
   })
 
-  // Basic sanitisation on original Research if needed
-  await sanitiseMd(RESEARCH_SRC)
+  // Basic sanitisation on original iteration if needed
+  await sanitiseMd(ITERATION_SRC)
 
   // Build Fumadocs-compatible content
-  await processResearchToFumadocs()
+  await processiterationToFumadocs()
 
   // Newsroom images are handled via MDX (remarkImage + remarkFigureImport)
 

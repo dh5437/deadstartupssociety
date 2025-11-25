@@ -1,16 +1,16 @@
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import type { ReactNode } from 'react'
 import { baseOptions } from '@/app/layout.config'
-import { researchSource } from '@/lib/source'
+import { iterationSource } from '@/lib/source'
 
 export default async function Layout({ params, children }: { params: Promise<{ lang: string }>; children: ReactNode }) {
   const { lang } = await params
 
-  // Hide global nav links within the Research docs layout
+  // Hide global nav links within the iteration docs layout
   const options = { ...baseOptions(lang), links: [] }
 
   return (
-    <DocsLayout {...options} tree={researchSource.pageTree[lang]}>
+    <DocsLayout {...options} tree={iterationSource.pageTree[lang]}>
       {children}
     </DocsLayout>
   )

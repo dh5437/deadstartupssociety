@@ -1,12 +1,12 @@
 import { createRelativeLink } from 'fumadocs-ui/mdx'
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page'
 import { notFound } from 'next/navigation'
-import { researchSource } from '@/lib/source'
+import { iterationSource } from '@/lib/source'
 import { getMDXComponents } from '@/mdx-components'
 
 export default async function Page(props: { params: Promise<{ slug?: string[]; lang: string }> }) {
   const params = await props.params
-  const page = researchSource.getPage(params.slug, params.lang)
+  const page = iterationSource.getPage(params.slug, params.lang)
   if (!page) notFound()
 
   const MDXContent = page.data.body
@@ -18,7 +18,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[]; l
       <DocsBody>
         <MDXContent
           components={getMDXComponents({
-            a: createRelativeLink(researchSource, page),
+            a: createRelativeLink(iterationSource, page),
           })}
         />
       </DocsBody>
@@ -27,12 +27,12 @@ export default async function Page(props: { params: Promise<{ slug?: string[]; l
 }
 
 export const generateStaticParams = async () => {
-  return researchSource.generateParams('slug', 'locale')
+  return iterationSource.generateParams('slug', 'locale')
 }
 
 export const generateMetadata = async (props: { params: Promise<{ slug?: string[]; lang: string }> }) => {
   const params = await props.params
-  const page = researchSource.getPage(params.slug, params.lang)
+  const page = iterationSource.getPage(params.slug, params.lang)
   if (!page) notFound()
 
   return {

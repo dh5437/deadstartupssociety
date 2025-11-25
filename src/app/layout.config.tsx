@@ -16,16 +16,9 @@ export function baseOptions(locale: string): BaseLayoutProps {
       {
         active: 'nested-url',
         on: 'nav',
-        text: t(locale, 'nav.research'),
+        text: t(locale, 'nav.iteration'),
         type: 'main',
-        url: withLocale('/r/000000'),
-      },
-      {
-        active: 'nested-url',
-        on: 'nav',
-        text: t(locale, 'nav.newsroom'),
-        type: 'main',
-        url: withLocale('/w'),
+        url: withLocale('/i/000000'),
       },
     ],
     nav: {

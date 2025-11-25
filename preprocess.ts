@@ -415,17 +415,17 @@ async function processResearchToFumadocs(): Promise<void> {
   // Clean output dir before writing
   await rmrf(CONTENT_RESEARCH)
   await fs.mkdir(CONTENT_RESEARCH, { recursive: true })
-  
+
   // Create subdirectories for journal and memex
-  const journalDir = path.join(CONTENT_RESEARCH, '(journal)')
-  const memexDir = path.join(CONTENT_RESEARCH, '(memex)')
+  const journalDir = path.join(CONTENT_RESEARCH, '(sprint)')
+  const memexDir = path.join(CONTENT_RESEARCH, '(retrospect)')
   await fs.mkdir(journalDir, { recursive: true })
   await fs.mkdir(memexDir, { recursive: true })
 
   for (const meta of metas) {
     const preferredSlug = (meta.rawSlug && lastSegment(meta.rawSlug)) || slugify(meta.fileBase)
     const lang = (meta.lang || 'en').toLowerCase()
-    
+
     // Determine output directory based on pattern
     let outputDir = CONTENT_RESEARCH
     // Special case: 000000 stays at root level
@@ -436,7 +436,7 @@ async function processResearchToFumadocs(): Promise<void> {
     } else if (/^[A-F0-9]{6}$/i.test(meta.fileBase) || /^[A-F0-9]{6}$/i.test(preferredSlug)) {
       outputDir = memexDir
     }
-    
+
     // Do not add language to filename; keep a single canonical filename
     const outFile = path.join(outputDir, `${preferredSlug}.mdx`)
     const raw = await fs.readFile(meta.srcPath, 'utf-8')
@@ -461,7 +461,7 @@ async function processResearchToFumadocs(): Promise<void> {
 // Inject or update frontmatter title with source filename and keep slug/lang
 function ensureFrontmatterTitle(raw: string, filenameBase: string, preferredSlug: string, lang: string): string {
   const esc = (s: string) => `'${s.replace(/'/g, "''")}'`
-  
+
   const fmMatch = raw.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/)
   if (fmMatch) {
     let fm = fmMatch[1]
@@ -474,13 +474,13 @@ function ensureFrontmatterTitle(raw: string, filenameBase: string, preferredSlug
     const body = raw.slice(fmMatch[0].length)
     return header + body
   }
-    const headerLines = [
-      `title: ${esc(filenameBase)}`,
-      preferredSlug ? `slug: '/${preferredSlug}'` : undefined,
-      lang ? `lang: ${esc(lang)}` : undefined,
-    ].filter(Boolean)
-    const header = `---\n${headerLines.join('\n')}\n---\n`
-    return header + raw
+  const headerLines = [
+    `title: ${esc(filenameBase)}`,
+    preferredSlug ? `slug: '/${preferredSlug}'` : undefined,
+    lang ? `lang: ${esc(lang)}` : undefined,
+  ].filter(Boolean)
+  const header = `---\n${headerLines.join('\n')}\n---\n`
+  return header + raw
 }
 
 // ── meta writers ────────────────────────────────────────────────────────────────
@@ -502,9 +502,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 async function writeMemexMeta(memexDir: string): Promise<void> {
   const entries = await fs.readdir(memexDir, { withFileTypes: true })
-  const pages = entries
-    .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
-    .map((e) => path.basename(e.name, '.mdx'))
+  const pages = entries.filter((e) => e.isFile() && e.name.endsWith('.mdx')).map((e) => path.basename(e.name, '.mdx'))
   shuffleArray(pages)
   const metaPath = path.join(memexDir, 'meta.json')
   const data = { pages }
@@ -533,13 +531,7 @@ async function processNewsroomAssets(): Promise<void> {
 
       let newFull = full
       const c = cand.trim()
-      if (
-        c &&
-        !c.startsWith('/') &&
-        !c.startsWith('http://') &&
-        !c.startsWith('https://') &&
-        !c.startsWith('data:')
-      ) {
+      if (c && !c.startsWith('/') && !c.startsWith('http://') && !c.startsWith('https://') && !c.startsWith('data:')) {
         // Resolve relative to the MDX file
         const abs = path.resolve(path.dirname(file), c)
         if (existsSync(abs)) {
@@ -550,7 +542,8 @@ async function processNewsroomAssets(): Promise<void> {
           try {
             await fs.copyFile(abs, destPath)
           } catch {}
-          const relUrl = '/generated/' + ['newsroom', ...relDir.split(path.sep), path.basename(abs)].join('/').replaceAll('\\', '/')
+          const relUrl =
+            '/generated/' + ['newsroom', ...relDir.split(path.sep), path.basename(abs)].join('/').replaceAll('\\', '/')
           newFull = full.replace(cand, relUrl)
           changed = true
         }

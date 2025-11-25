@@ -16,25 +16,6 @@ export const docs = defineDocs({
   },
 })
 
-// Newsroom collection (blog-style posts)
-export const newsroom = defineDocs({
-  dir: 'content/newsroom',
-  // Use Next.js bundler integration for MD/MDX so static imports work
-  // (enables remark-image to import local assets like PNG/JPG)
-  docs: {
-    // Extend default frontmatter to include date/category/draft/slug
-    schema: frontmatterSchema.extend({
-      date: z.union([z.string(), z.date()]).optional(),
-      category: z.string().optional(),
-      draft: z.boolean().optional(),
-      slug: z.string().optional(),
-    }),
-  },
-  meta: {
-    schema: metaSchema,
-  },
-})
-
 import { remarkImage } from 'fumadocs-core/mdx-plugins'
 
 export default defineConfig({

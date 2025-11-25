@@ -1,16 +1,9 @@
 import { loader } from 'fumadocs-core/source'
-import { docs, newsroom } from '@/.source'
+import { docs } from '@/.source'
 import { i18n } from './i18n'
 
 export const researchSource = loader({
   baseUrl: '/i',
   i18n,
   source: docs.toFumadocsSource(),
-})
-
-// Blog/newsroom source
-export const newsroomSource = loader({
-  baseUrl: '/w',
-  i18n,
-  source: newsroom.toFumadocsSource(),
 })

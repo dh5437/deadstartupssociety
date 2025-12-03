@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/black.css';
 @import 'fumadocs-ui/css/preset.css';
 @import 'tw-animate-css';
 
@@ -134,10 +134,10 @@
     /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind apply (shadcn/ui) */
     @apply bg-background text-foreground;
   }
-  code, pre {
+  code,
+  pre {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   }
 }
-
 
 /* next-video removed: no overrides needed */

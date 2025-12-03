@@ -13,8 +13,8 @@ const REPO = path.resolve(__dirname)
 // Output roots
 const PUBLIC_GENERATED = path.join(REPO, 'public', 'generated')
 const ITERATION_SRC = path.join(REPO, 'Iteration')
-const ITERATION_PAGES = path.join(ITERATION_SRC, 'pages')
-const ITERATION_JOURNALS = path.join(ITERATION_SRC, 'journals')
+const ITERATION_SPRINT = path.join(ITERATION_SRC, 'sprint')
+const ITERATION_RETROSPECT = path.join(ITERATION_SRC, 'retrospect')
 const CONTENT_ITERATION = path.join(REPO, 'content', 'iteration')
 
 // ── helpers ──────────────────────────────────────────────────────────────────────
@@ -174,8 +174,8 @@ async function readFrontmatter(filePath: string): Promise<{ slug?: string; title
 
 async function collectDocs(): Promise<DocMeta[]> {
   const files = [
-    ...(existsSync(ITERATION_PAGES) ? await findFiles(ITERATION_PAGES, ['.md', '.mdx']) : []),
-    ...(existsSync(ITERATION_JOURNALS) ? await findFiles(ITERATION_JOURNALS, ['.md', '.mdx']) : []),
+    ...(existsSync(ITERATION_SPRINT) ? await findFiles(ITERATION_SPRINT, ['.md', '.mdx']) : []),
+    ...(existsSync(ITERATION_RETROSPECT) ? await findFiles(ITERATION_RETROSPECT, ['.md', '.mdx']) : []),
   ]
   // Include root-level markdown files (e.g., Welcome.md, Welcome.ko.md, 환영합니다.md)
   try {
@@ -416,24 +416,33 @@ async function processiterationToFumadocs(): Promise<void> {
   await fs.mkdir(CONTENT_ITERATION, { recursive: true })
 
   // Create subdirectories for journal and memex
-  const journalDir = path.join(CONTENT_ITERATION, '(sprint)')
-  const memexDir = path.join(CONTENT_ITERATION, '(retrospect)')
-  await fs.mkdir(journalDir, { recursive: true })
-  await fs.mkdir(memexDir, { recursive: true })
+  const sprintDir = path.join(CONTENT_ITERATION, '(sprint)')
+  const retrospectDir = path.join(CONTENT_ITERATION, '(retrospect)')
+  await fs.mkdir(sprintDir, { recursive: true })
+  await fs.mkdir(retrospectDir, { recursive: true })
 
   for (const meta of metas) {
     const preferredSlug = (meta.rawSlug && lastSegment(meta.rawSlug)) || slugify(meta.fileBase)
     const lang = (meta.lang || 'en').toLowerCase()
 
-    // Determine output directory based on pattern
+    // Determine output directory based on source folder or filename pattern
     let outputDir = CONTENT_ITERATION
+
+    // Prefer folder-based mapping: if the source file lives under
+    // Iteration/retrospect or Iteration/sprint (or Iteration/journals), map accordingly.
+    try {
+      const rel = path.relative(ITERATION_SRC, meta.srcPath)
+      const first = rel.split(path.sep)[0]
+      if (first === 'retrospect') {
+        outputDir = retrospectDir
+      } else if (first === 'sprint') {
+        outputDir = sprintDir
+      }
+    } catch {}
+
     // Special case: 000000 stays at root level
     if (preferredSlug === '000000' || meta.fileBase === '000000') {
       outputDir = CONTENT_ITERATION
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(meta.fileBase) || /^\d{4}-\d{2}-\d{2}$/.test(preferredSlug)) {
-      outputDir = journalDir
-    } else if (/^[A-F0-9]{6}$/i.test(meta.fileBase) || /^[A-F0-9]{6}$/i.test(preferredSlug)) {
-      outputDir = memexDir
     }
 
     // Do not add language to filename; keep a single canonical filename
@@ -451,8 +460,8 @@ async function processiterationToFumadocs(): Promise<void> {
   }
 
   // Write folder metadata files
-  await writeJournalMeta(journalDir)
-  await writeMemexMeta(memexDir)
+  await writeJournalMeta(sprintDir)
+  await writeMemexMeta(retrospectDir)
 
   console.log('✅ Wrote docs into content/iteration')
 }
@@ -484,8 +493,8 @@ function ensureFrontmatterTitle(raw: string, filenameBase: string, preferredSlug
 
 // ── meta writers ────────────────────────────────────────────────────────────────
 
-async function writeJournalMeta(journalDir: string): Promise<void> {
-  const metaPath = path.join(journalDir, 'meta.json')
+async function writeJournalMeta(sprintDir: string): Promise<void> {
+  const metaPath = path.join(sprintDir, 'meta.json')
   const data = { pages: ['z...a'] }
   await fs.writeFile(metaPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8')
 }
@@ -499,11 +508,11 @@ function shuffleArray<T>(arr: T[]): T[] {
   return arr
 }
 
-async function writeMemexMeta(memexDir: string): Promise<void> {
-  const entries = await fs.readdir(memexDir, { withFileTypes: true })
+async function writeMemexMeta(retrospectDir: string): Promise<void> {
+  const entries = await fs.readdir(retrospectDir, { withFileTypes: true })
   const pages = entries.filter((e) => e.isFile() && e.name.endsWith('.mdx')).map((e) => path.basename(e.name, '.mdx'))
   shuffleArray(pages)
-  const metaPath = path.join(memexDir, 'meta.json')
+  const metaPath = path.join(retrospectDir, 'meta.json')
   const data = { pages }
   await fs.writeFile(metaPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8')
 }

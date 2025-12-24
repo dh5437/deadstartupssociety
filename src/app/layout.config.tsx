@@ -8,6 +8,8 @@ const alt = (locale: string) => {
   return 'Logo'
 }
 
+const logo = '/assets/logo.png'
+
 export function baseOptions(locale: string): BaseLayoutProps {
   const withLocale = (path: string) => `/${locale}${path}`
   return {
@@ -24,10 +26,7 @@ export function baseOptions(locale: string): BaseLayoutProps {
     nav: {
       title: (
         <>
-          <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" aria-label={alt(locale)}>
-            <title>{alt(locale)}</title>
-            <circle cx={12} cy={12} r={12} fill="currentColor" />
-          </svg>
+          <img src={logo} alt={alt(locale)} width={24} height={24} style={{ display: 'block', borderRadius: '50%' }} />
           <span>{t(locale, 'nav.title')}</span>
         </>
       ),

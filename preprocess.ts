@@ -460,8 +460,8 @@ async function processiterationToFumadocs(): Promise<void> {
   }
 
   // Write folder metadata files
-  await writeJournalMeta(sprintDir)
-  await writeMemexMeta(retrospectDir)
+  await writeSprintMeta(sprintDir)
+  await writeRetrospectMeta(retrospectDir)
 
   console.log('✅ Wrote docs into content/iteration')
 }
@@ -493,10 +493,23 @@ function ensureFrontmatterTitle(raw: string, filenameBase: string, preferredSlug
 
 // ── meta writers ────────────────────────────────────────────────────────────────
 
-async function writeJournalMeta(sprintDir: string): Promise<void> {
+function stripLangSuffix(id: string) {
+  return id.replace(/\.(ko|en)$/i, '')
+}
+
+async function writeSprintMeta(sprintDir: string): Promise<void> {
   const metaPath = path.join(sprintDir, 'meta.json')
-  const data = { pages: ['z...a'] }
-  await fs.writeFile(metaPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8')
+  const entries = await fs.readdir(sprintDir, { withFileTypes: true })
+
+  const pages = entries
+    .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
+    .map((e) => stripLangSuffix(path.basename(e.name, '.mdx')))
+
+  // 중복 제거 (ko/en 둘 다 있으면 0A4B11이 2번 나오니까)
+  const unique = Array.from(new Set(pages))
+
+  shuffleArray(unique)
+  await fs.writeFile(metaPath, `${JSON.stringify({ pages: unique }, null, 2)}\n`, 'utf-8')
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -508,13 +521,18 @@ function shuffleArray<T>(arr: T[]): T[] {
   return arr
 }
 
-async function writeMemexMeta(retrospectDir: string): Promise<void> {
+async function writeRetrospectMeta(retrospectDir: string): Promise<void> {
   const entries = await fs.readdir(retrospectDir, { withFileTypes: true })
-  const pages = entries.filter((e) => e.isFile() && e.name.endsWith('.mdx')).map((e) => path.basename(e.name, '.mdx'))
-  shuffleArray(pages)
+
+  const pages = entries
+    .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
+    .map((e) => stripLangSuffix(path.basename(e.name, '.mdx')))
+
+  const unique = Array.from(new Set(pages))
+
+  shuffleArray(unique)
   const metaPath = path.join(retrospectDir, 'meta.json')
-  const data = { pages }
-  await fs.writeFile(metaPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8')
+  await fs.writeFile(metaPath, `${JSON.stringify({ pages: unique }, null, 2)}\n`, 'utf-8')
 }
 
 // ── entry point ─────────────────────────────────────────────────────────────────

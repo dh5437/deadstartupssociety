@@ -138,6 +138,10 @@
   pre {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   }
+  .prose :where(strong):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    font-weight: 700 !important;
+    color: var(--foreground) !important;
+  }
 }
 
 /* next-video removed: no overrides needed */

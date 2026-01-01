@@ -501,37 +501,55 @@ async function writeSprintMeta(sprintDir: string): Promise<void> {
   const metaPath = path.join(sprintDir, 'meta.json')
   const entries = await fs.readdir(sprintDir, { withFileTypes: true })
 
-  const pages = entries
-    .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
-    .map((e) => stripLangSuffix(path.basename(e.name, '.mdx')))
+  const files = await Promise.all(
+    entries
+      .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
+      .map(async (e) => {
+        const fullPath = path.join(sprintDir, e.name)
+        const stat = await fs.stat(fullPath)
+        return {
+          id: stripLangSuffix(path.basename(e.name, '.mdx')),
+          mtime: stat.mtimeMs,
+        }
+      })
+  )
 
-  // 중복 제거 (ko/en 둘 다 있으면 0A4B11이 2번 나오니까)
-  const unique = Array.from(new Set(pages))
+  const unique = Array.from(
+    new Map(
+      files
+        .sort((a, b) => a.mtime - b.mtime) // ✅ 최신순
+        .map((f) => [f.id, f.id])
+    ).values()
+  )
 
-  shuffleArray(unique)
   await fs.writeFile(metaPath, `${JSON.stringify({ pages: unique }, null, 2)}\n`, 'utf-8')
 }
 
-function shuffleArray<T>(arr: T[]): T[] {
-  // Fisher–Yates
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
-
 async function writeRetrospectMeta(retrospectDir: string): Promise<void> {
+  const metaPath = path.join(retrospectDir, 'meta.json')
   const entries = await fs.readdir(retrospectDir, { withFileTypes: true })
 
-  const pages = entries
-    .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
-    .map((e) => stripLangSuffix(path.basename(e.name, '.mdx')))
+  const files = await Promise.all(
+    entries
+      .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
+      .map(async (e) => {
+        const fullPath = path.join(retrospectDir, e.name)
+        const stat = await fs.stat(fullPath)
+        return {
+          id: stripLangSuffix(path.basename(e.name, '.mdx')),
+          mtime: stat.mtimeMs,
+        }
+      })
+  )
 
-  const unique = Array.from(new Set(pages))
+  const unique = Array.from(
+    new Map(
+      files
+        .sort((a, b) => a.mtime - b.mtime) // ✅ 최신순
+        .map((f) => [f.id, f.id])
+    ).values()
+  )
 
-  shuffleArray(unique)
-  const metaPath = path.join(retrospectDir, 'meta.json')
   await fs.writeFile(metaPath, `${JSON.stringify({ pages: unique }, null, 2)}\n`, 'utf-8')
 }
 

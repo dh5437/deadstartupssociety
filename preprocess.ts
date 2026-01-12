@@ -493,63 +493,111 @@ function ensureFrontmatterTitle(raw: string, filenameBase: string, preferredSlug
 
 // ── meta writers ────────────────────────────────────────────────────────────────
 
+// ── meta writers ────────────────────────────────────────────────────────────────
 function stripLangSuffix(id: string) {
   return id.replace(/\.(ko|en)$/i, '')
 }
 
+/**
+ * 파일 내용(Frontmatter)을 읽어서 날짜와 ID를 추출하는 함수
+ * 기준: newsletter: '{{date:YYYY-MM-DD}}'
+ */
+async function getSourceTimeMap(sourceDir: string): Promise<Map<string, number>> {
+  const timeMap = new Map<string, number>()
+
+  // newsletter 패턴 정규식: newsletter: '{{date:2026-01-02}}'
+  const NEWSLETTER_RE = /newsletter:\s*['"]?\{\{date:(\d{4}-\d{2}-\d{2})\}\}['"]?/
+
+  try {
+    const entries = await fs.readdir(sourceDir, { withFileTypes: true })
+    const files = entries.filter((e) => e.isFile() && (e.name.endsWith('.md') || e.name.endsWith('.mdx')))
+
+    await Promise.all(
+      files.map(async (e) => {
+        const fullPath = path.join(sourceDir, e.name)
+
+        // 1. 파일 내용 읽기
+        const content = await fs.readFile(fullPath, 'utf-8')
+
+        // 2. ID (Slug) 추출
+        const slugMatch = content.match(SLUG_RE)
+        let id = ''
+        if (slugMatch && slugMatch[1]) {
+          const parts = slugMatch[1].split('/')
+          id = parts[parts.length - 1]
+        } else {
+          const baseName = stripLangSuffix(path.basename(e.name, path.extname(e.name)))
+          id = slugify(baseName)
+        }
+
+        // 3. 날짜 (Newsletter) 추출
+        let time = 0
+        const dateMatch = content.match(NEWSLETTER_RE)
+
+        if (dateMatch && dateMatch[1]) {
+          // '2026-01-02' 문자열을 타임스탬프로 변환
+          time = new Date(dateMatch[1]).getTime()
+        } else {
+          // newsletter 필드가 없으면 파일 생성일(birthtime)을 fallback으로 사용
+          const stat = await fs.stat(fullPath)
+          time = stat.birthtime.getTime()
+        }
+
+        // 4. Map에 저장 (ko/en 중 더 최신 날짜 유지)
+        if (id) {
+          const existingTime = timeMap.get(id) || 0
+          if (time > existingTime) {
+            timeMap.set(id, time)
+          }
+        }
+      })
+    )
+  } catch (e) {
+    console.error(`Error reading source dir ${sourceDir}:`, e)
+  }
+  return timeMap
+}
+
 async function writeSprintMeta(sprintDir: string): Promise<void> {
+  // 소스 파일 시간 맵 가져오기 (이제 키가 '0EBC19' 같은 형식이 됨)
+  const sourceTimeMap = await getSourceTimeMap(ITERATION_SPRINT)
+
   const metaPath = path.join(sprintDir, 'meta.json')
   const entries = await fs.readdir(sprintDir, { withFileTypes: true })
 
-  const files = await Promise.all(
-    entries
-      .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
-      .map(async (e) => {
-        const fullPath = path.join(sprintDir, e.name)
-        const stat = await fs.stat(fullPath)
-        return {
-          id: stripLangSuffix(path.basename(e.name, '.mdx')),
-          mtime: stat.mtimeMs,
-        }
-      })
-  )
+  const mdxFiles = entries.filter((e) => e.isFile() && e.name.endsWith('.mdx'))
 
-  const unique = Array.from(
-    new Map(
-      files
-        .sort((a, b) => a.mtime - b.mtime) // ✅ 최신순
-        .map((f) => [f.id, f.id])
-    ).values()
-  )
+  const filesWithTime = mdxFiles.map((e) => {
+    const id = stripLangSuffix(path.basename(e.name, '.mdx'))
+    // 이제 ID가 서로 매칭되므로 시간을 찾을 수 있음
+    const time = sourceTimeMap.get(id) || 0
+    return { id, time }
+  })
 
+  // 최신순 정렬 (mtime 기준)
+  filesWithTime.sort((a, b) => b.time - a.time)
+
+  const unique = Array.from(new Set(filesWithTime.map((f) => f.id)))
   await fs.writeFile(metaPath, `${JSON.stringify({ pages: unique }, null, 2)}\n`, 'utf-8')
 }
 
 async function writeRetrospectMeta(retrospectDir: string): Promise<void> {
+  const sourceTimeMap = await getSourceTimeMap(ITERATION_RETROSPECT)
+
   const metaPath = path.join(retrospectDir, 'meta.json')
   const entries = await fs.readdir(retrospectDir, { withFileTypes: true })
 
-  const files = await Promise.all(
-    entries
-      .filter((e) => e.isFile() && e.name.endsWith('.mdx'))
-      .map(async (e) => {
-        const fullPath = path.join(retrospectDir, e.name)
-        const stat = await fs.stat(fullPath)
-        return {
-          id: stripLangSuffix(path.basename(e.name, '.mdx')),
-          mtime: stat.mtimeMs,
-        }
-      })
-  )
+  const mdxFiles = entries.filter((e) => e.isFile() && e.name.endsWith('.mdx'))
 
-  const unique = Array.from(
-    new Map(
-      files
-        .sort((a, b) => a.mtime - b.mtime) // ✅ 최신순
-        .map((f) => [f.id, f.id])
-    ).values()
-  )
+  const filesWithTime = mdxFiles.map((e) => {
+    const id = stripLangSuffix(path.basename(e.name, '.mdx'))
+    const time = sourceTimeMap.get(id) || 0
+    return { id, time }
+  })
 
+  filesWithTime.sort((a, b) => b.time - a.time)
+
+  const unique = Array.from(new Set(filesWithTime.map((f) => f.id)))
   await fs.writeFile(metaPath, `${JSON.stringify({ pages: unique }, null, 2)}\n`, 'utf-8')
 }
 

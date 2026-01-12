@@ -8,7 +8,7 @@ const alt = (locale: string) => {
   return 'Logo'
 }
 
-const logo = '/assets/logo.png'
+const logo = '/favicon.ico'
 
 export function baseOptions(locale: string): BaseLayoutProps {
   const withLocale = (path: string) => `/${locale}${path}`

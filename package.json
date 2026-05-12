@@ -42,7 +42,8 @@
     "postinstall": "fumadocs-mdx",
     "start": "next start",
     "format": "bunx prettier -w '**/*.{ts,tsx,json,md,mdx,css,scss,html,yml,yaml,mts,mjs,cts,cjs,js,jsx,xml}' --log-level silent",
-    "save": "bun run preprocess.ts && git add . && git status && git commit -m 'wrote something' && git push"
+    "save": "bun run preprocess.ts && git add . && git status && git commit -m 'wrote something' && git push",
+    "slug": "bun run scripts/slug.ts"
   },
   "version": "0.0.0"
 }
